@@ -11,8 +11,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-
-
+#include <sys/stat.h>
+#include <sys/fcntl.h>
 
 /*
   Function Declarations for builtin shell commands:
@@ -21,7 +21,9 @@ int lsh_cd(char **args);
 int lsh_help(char **args);
 int lsh_exit(char **args);
 
-
+int lsh_echo(char **args);
+int lsh_pwd(char **args);
+int lsh_mkdir(char **args);
 /*
   List of builtin commands, followed by their corresponding functions.
  */
@@ -29,12 +31,18 @@ char *builtin_str[] = {
   "cd",
   "help",
   "exit",
+  "echo",
+  "pwd",
+  "mkdir"
 };
 
 int (*builtin_func[]) (char **) = {
   &lsh_cd,
   &lsh_help,
   &lsh_exit,
+  &lsh_echo,
+  &lsh_pwd,
+  &lsh_mkdir
 };
 
 int lsh_num_builtins() {
@@ -45,13 +53,45 @@ int lsh_num_builtins() {
   Builtin function implementations.
 */
 
+
+int lsh_mkdir(char **args) {
+    if (args[1] == NULL) {
+        fprintf(stderr, "lsh_mkdir: expected argument to \"mkdir\"\n");
+    }
+    else {
+        if (mkdir(args[1], 0755) != 0) {
+            perror("lsh");
+        }
+    }
+    return 1;
+}
+
+int lsh_pwd(char **args)
+{
+   char * env;
+   if((env = getenv("PWD")) == NULL)
+   {
+	  fprintf(stderr,"%s: Fail pwd \n", args[0]);
+	  return -1;
+   }
+   else
+	  printf("%s \n",env);
+   return 1;
+}
+int lsh_echo(char **args) {
+    int i = 1;
+    while (args[i] != NULL) {
+        printf("%s", args[i]);
+        i++;
+    }
+    printf("\n");
+    return 1;
+}
 /**
    @brief Bultin command: change directory.
    @param args List of args.  args[0] is "cd".  args[1] is the directory.
    @return Always returns 1, to continue executing.
  */
-
-
 int lsh_cd(char **args)
 {
   if (args[1] == NULL) {
@@ -232,7 +272,7 @@ char **lsh_split_line(char *line)
       tokens_backup = tokens;
       tokens = realloc(tokens, bufsize * sizeof(char*));
       if (!tokens) {
-    free(tokens_backup);
+        free(tokens_backup);
         fprintf(stderr, "lsh: allocation error\n");
         exit(EXIT_FAILURE);
       }
